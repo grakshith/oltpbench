@@ -28,7 +28,8 @@ import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
-
+import java.security.*;
+import java.util.*;
 public class StockLevel extends TPCCProcedure {
 
     private static final Logger LOG = Logger.getLogger(StockLevel.class);
@@ -60,7 +61,7 @@ public class StockLevel extends TPCCProcedure {
 				TPCCWorker w) throws SQLException {
 
 	     boolean trace = LOG.isTraceEnabled(); 
-	     
+	     conn.setAutoCommit(false);
 	     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
 	     stockGetCountStock= this.getPreparedStatement(conn, stockGetCountStockSQL);
 
@@ -101,6 +102,36 @@ public class StockLevel extends TPCCProcedure {
          }
          stock_count = rs.getInt("STOCK_COUNT");
          if (trace) LOG.trace("stockGetCountStock RESULT=" + stock_count);
+
+        //  if(debug==true){
+        //     SQLStmt getChangeSet = new SQLStmt("SELECT hash FROM credereum_get_changeset()");
+        //     PreparedStatement hash = this.getPreparedStatement(conn, getChangeSet);
+        //     ResultSet results = hash.executeQuery();
+        //     LOG.debug(results.toString());
+        //     ArrayList<byte[]> hash_bytes= new ArrayList<byte[]>();
+        //     while(results.next()){
+        //         hash_bytes.add(results.getBytes(1));
+        //     }
+        //     LOG.debug("Got the hash for the changeset: "+hash_bytes.toString());
+        //     try{
+        //         Signature rsa = Signature.getInstance("SHA256withDSA");
+        //         rsa.initSign(priv);
+        //         for(byte[] b:hash_bytes){
+        //             rsa.update(b);
+        //         }
+        //         byte[] signature = rsa.sign();
+        //         SQLStmt signatureSet = new SQLStmt(String.format("SELECT credereum_sign_transaction(?,?);"));
+        //         PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
+        //         signedStatement.setString(1, pub_key.toString());
+        //         signedStatement.setBytes(2, signature);
+        //         signedStatement.executeUpdate();
+        //     }
+        //     catch(Exception e){
+        //         LOG.error("ERROR:",e);
+        //     }
+
+
+        // }
 
          conn.commit();
          rs.close();

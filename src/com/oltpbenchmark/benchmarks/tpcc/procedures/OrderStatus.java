@@ -31,6 +31,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
+import java.security.*;
 
 public class OrderStatus extends TPCCProcedure {
 
@@ -80,6 +81,7 @@ public class OrderStatus extends TPCCProcedure {
         boolean trace = LOG.isTraceEnabled();
         
         // initializing all prepared statements
+        conn.setAutoCommit(false);
         payGetCust = this.getPreparedStatement(conn, payGetCustSQL);
         customerByName = this.getPreparedStatement(conn, customerByNameSQL);
         ordStatGetNewestOrd = this.getPreparedStatement(conn, ordStatGetNewestOrdSQL);
@@ -165,6 +167,37 @@ public class OrderStatus extends TPCCProcedure {
         rs = null;
 
         // commit the transaction
+
+        // if(debug==true){
+        //     SQLStmt getChangeSet = new SQLStmt("SELECT hash FROM credereum_get_changeset()");
+        //     PreparedStatement hash = this.getPreparedStatement(conn, getChangeSet);
+        //     ResultSet result = hash.executeQuery();
+        //     LOG.debug(result.toString());
+        //     ArrayList<byte[]> hash_bytes=new ArrayList<byte[]>();
+        //     while(result.next()){
+        //         hash_bytes.add(result.getBytes(1));
+        //     }
+        //     LOG.debug("Got the hash for the changeset: "+hash_bytes.toString());
+        //     try{
+        //         Signature rsa = Signature.getInstance("SHA256withDSA");
+        //         rsa.initSign(priv);
+        //         for(byte[] b:hash_bytes){
+        //             rsa.update(b);
+        //         }
+        //         byte[] signature = rsa.sign();
+        //         SQLStmt signatureSet = new SQLStmt(String.format("SELECT credereum_sign_transaction(?,?);"));
+        //         PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
+        //         signedStatement.setString(1, pub_key.toString());
+        //         signedStatement.setBytes(2, signature);
+        //         signedStatement.executeUpdate();
+        //     }
+        //     catch(Exception e){
+        //         LOG.error("ERROR:",e);
+        //     }
+
+
+        // }
+
         conn.commit();
         
         if (orderLines.isEmpty()) {

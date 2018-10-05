@@ -31,6 +31,8 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 
+import java.security.*;
+import java.util.*;
 public class Delivery extends TPCCProcedure {
 
     private static final Logger LOG = Logger.getLogger(Delivery.class);
@@ -102,7 +104,7 @@ public class Delivery extends TPCCProcedure {
         boolean trace = LOG.isDebugEnabled();
         int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
         Timestamp timestamp = w.getBenchmarkModule().getTimestamp(System.currentTimeMillis());
-
+        conn.setAutoCommit(false);
 		delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL);
 		delivDeleteNewOrder =  this.getPreparedStatement(conn, delivDeleteNewOrderSQL);
 		delivGetCustId = this.getPreparedStatement(conn, delivGetCustIdSQL);
@@ -221,6 +223,7 @@ public class Delivery extends TPCCProcedure {
             delivUpdateCustBalDelivCnt.setInt(idx++, d_id);
             delivUpdateCustBalDelivCnt.setInt(idx++, c_id);
             if (trace) LOG.trace("delivUpdateCustBalDelivCnt START");
+            LOG.trace(delivUpdateCustBalDelivCnt);
             result = delivUpdateCustBalDelivCnt.executeUpdate();
             if (trace) LOG.trace("delivUpdateCustBalDelivCnt END");
 
@@ -230,6 +233,56 @@ public class Delivery extends TPCCProcedure {
                 if (trace) LOG.warn(msg);
                 throw new RuntimeException(msg);
             }
+        }
+
+        if(debug==true){
+            SQLStmt getChangeSet = new SQLStmt("SELECT key, hash, next FROM credereum_get_changeset();");
+            PreparedStatement hash = this.getPreparedStatement(conn, getChangeSet);
+            ResultSet rs = hash.executeQuery();
+            LOG.debug(rs.toString());
+            byte[] hash_bytes;
+            HashMap<String, byte[]> node;
+
+            HashMap<String,HashMap<String, byte[]> > oldTree = new HashMap<String,HashMap<String, byte[]> >();
+            HashMap<String,HashMap<String, byte[]> > newTree = new HashMap<String,HashMap<String, byte[]> >();
+            while(rs.next()){
+                String key = rs.getString(1);
+                hash_bytes = rs.getBytes(2);
+                node = new HashMap<String, byte[]>();
+                node.put("hash", hash_bytes);
+                boolean next = rs.getBoolean(3);
+                if(next){
+                    newTree.put(key, node);
+                }
+                else{
+                    oldTree.put(key, node);
+                }
+                
+            }
+            ArrayList<byte[]> hashes = new ArrayList<byte[]>();
+            hashes.add(newTree.get("").get("hash"));
+            hashes.add(oldTree.get("").get("hash"));
+            LOG.debug("Got the hash for the changeset: "+hashes.toString());
+            try{
+                Signature rsa = Signature.getInstance("SHA256withRSA");
+                rsa.initSign(priv);
+                for(byte[] b:hashes){
+                    rsa.update(b);
+                }
+                byte[] signature = rsa.sign();
+                LOG.debug("Signing complete");
+                LOG.debug(signature.toString());
+                SQLStmt signatureSet = new SQLStmt(String.format("SELECT credereum_sign_transaction(?,?);"));
+                PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
+                signedStatement.setString(1, pub_key.toString());
+                signedStatement.setBytes(2, signature);
+                signedStatement.executeUpdate();
+            }
+            catch(Exception e){
+                LOG.error("ERROR:",e);
+            }
+
+
         }
 
         conn.commit();
