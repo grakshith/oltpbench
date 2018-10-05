@@ -4,19 +4,20 @@
     <!-- Connection details -->
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
-    <DBUrl>jdbc:postgresql://localhost:6543/tpcc</DBUrl>
+    <DBUrl>jdbc:postgresql://localhost:5432/tpcc_cred</DBUrl>
     <username>dsladmin</username>
     <password>dsladmin</password>
     <isolation>TRANSACTION_READ_COMMITTED</isolation>
     
     <!-- Scale factor is the number of warehouses in TPCC -->
-    <scalefactor>4</scalefactor>
+    <scalefactor>10</scalefactor>
+
     
     <!-- The workload -->
     <terminals>10</terminals>
     <works>
         <work>
-          <time>60</time>
+          <time>600</time>
           <rate>100000</rate>
           <ratelimited bench="tpcc">false</ratelimited>
           <weights>45,43,40,40,40</weights>
