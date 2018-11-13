@@ -20,7 +20,7 @@
           <time>600</time>
           <rate>100000</rate>
           <ratelimited bench="tpcc">false</ratelimited>
-          <weights>45,43,40,40,40</weights>
+          <weights>45,43,4,4,4</weights>
         </work>
 	</works>
 	
