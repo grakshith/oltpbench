@@ -323,11 +323,11 @@ public class Payment extends TPCCProcedure {
                     rsa.update(b);
                 }
                 byte[] signature = rsa.sign();
-                SQLStmt signatureSet = new SQLStmt(String.format("SELECT credereum_sign_transaction(?,?);"));
+                SQLStmt signatureSet = new SQLStmt(String.format("SELECT from credereum_sign_transaction(?,?);"));
                 PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
                 signedStatement.setString(1, pub_key.toString());
                 signedStatement.setBytes(2, signature);
-                signedStatement.executeUpdate();
+                signedStatement.execute();
             }
             catch(Exception e){
                 LOG.error("ERROR:",e);
