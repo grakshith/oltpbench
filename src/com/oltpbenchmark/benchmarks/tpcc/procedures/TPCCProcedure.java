@@ -39,8 +39,8 @@ public abstract class TPCCProcedure extends Procedure {
     public void read_file() throws Exception{
         try{
 
-            byte[] privkeyBytes = Files.readAllBytes(Paths.get("/media/dsladmin/Linux/rakshith/pg_credereum/sample/pkcs8_key"));
-            byte[] pubkeyBytes = Files.readAllBytes(Paths.get("/media/dsladmin/Linux/rakshith/pg_credereum/sample/public_key.der"));
+            byte[] privkeyBytes = Files.readAllBytes(Paths.get("/home/rakshith/IISC/pg_credereum/sample/pkcs8_key"));
+            byte[] pubkeyBytes = Files.readAllBytes(Paths.get("/home/rakshith/IISC/pg_credereum/sample/public_key.der"));
             PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privkeyBytes);
             KeyFactory kf = KeyFactory.getInstance("RSA");
             priv=kf.generatePrivate(spec);

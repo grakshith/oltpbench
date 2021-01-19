@@ -23,7 +23,11 @@ import java.sql.SQLException;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.SQLStmt;
 
-public class InsertRecord extends Procedure {
+import java.sql.ResultSet;
+import java.util.*;
+import java.security.*;
+
+public class InsertRecord extends YCSBProcedure {
     public final SQLStmt insertStmt = new SQLStmt(
         "INSERT INTO USERTABLE VALUES (?,?,?,?,?,?,?,?,?,?,?)"
     );
@@ -36,6 +40,60 @@ public class InsertRecord extends Procedure {
             stmt.setString(i + 2, vals[i]);
         }
         stmt.executeUpdate();
+
+        try{
+            if(debug==true){
+				SQLStmt getChangeSet = new SQLStmt("SELECT key, hash, next FROM credereum_get_changeset();");
+				PreparedStatement hash = this.getPreparedStatement(conn, getChangeSet);
+				ResultSet results = hash.executeQuery();
+				LOG.debug(results.toString());
+				byte[] hash_bytes;
+				HashMap<String, byte[]> node;
+
+				HashMap<String,HashMap<String, byte[]> > oldTree = new HashMap<String,HashMap<String, byte[]> >();
+				HashMap<String,HashMap<String, byte[]> > newTree = new HashMap<String,HashMap<String, byte[]> >();
+				while(results.next()){
+					String key = results.getString(1);
+					hash_bytes = results.getBytes(2);
+					node = new HashMap<String, byte[]>();
+					node.put("hash", hash_bytes);
+					boolean next = results.getBoolean(3);
+					if(next){
+						newTree.put(key, node);
+					}
+					else{
+						oldTree.put(key, node);
+					}
+					
+				}
+				ArrayList<byte[]> hashes = new ArrayList<byte[]>();
+				hashes.add(newTree.get("").get("hash"));
+				hashes.add(oldTree.get("").get("hash"));
+				LOG.debug("Got the hash for the changeset: "+hashes.toString());
+				try{
+					Signature rsa = Signature.getInstance("SHA256withRSA");
+					rsa.initSign(priv);
+					for(byte[] b:hashes){
+						rsa.update(b);
+					}
+					byte[] signature = rsa.sign();
+					LOG.debug(signature.toString());
+					SQLStmt signatureSet = new SQLStmt(String.format("SELECT from credereum_sign_transaction(?,?);"));
+                	PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
+                	signedStatement.setString(1, pub_key.toString());
+                	signedStatement.setBytes(2, signature);
+                	signedStatement.execute();
+				}
+				catch(Exception e){
+					LOG.error("ERROR:",e);
+				}
+	
+				conn.commit();
+			}
+        }
+        catch(Exception e){
+            LOG.error("ERROR:", e);
+        }
     }
 
 }

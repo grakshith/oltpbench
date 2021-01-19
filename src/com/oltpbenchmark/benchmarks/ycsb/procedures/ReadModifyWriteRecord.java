@@ -25,7 +25,11 @@ import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.ycsb.YCSBConstants;
 
-public class ReadModifyWriteRecord extends Procedure {
+import java.sql.ResultSet;
+import java.util.*;
+import java.security.*;
+
+public class ReadModifyWriteRecord extends YCSBProcedure {
     public final SQLStmt selectStmt = new SQLStmt(
         "SELECT * FROM USERTABLE where YCSB_KEY=? FOR UPDATE"
     );
@@ -54,6 +58,60 @@ public class ReadModifyWriteRecord extends Procedure {
         	stmt.setString(i+1, fields[i]);
         }
         stmt.executeUpdate();
+
+        try{
+            if(debug==true){
+				SQLStmt getChangeSet = new SQLStmt("SELECT key, hash, next FROM credereum_get_changeset();");
+				PreparedStatement hash = this.getPreparedStatement(conn, getChangeSet);
+				ResultSet result = hash.executeQuery();
+				LOG.debug(result.toString());
+				byte[] hash_bytes;
+				HashMap<String, byte[]> node;
+
+				HashMap<String,HashMap<String, byte[]> > oldTree = new HashMap<String,HashMap<String, byte[]> >();
+				HashMap<String,HashMap<String, byte[]> > newTree = new HashMap<String,HashMap<String, byte[]> >();
+				while(result.next()){
+					String key = result.getString(1);
+					hash_bytes = result.getBytes(2);
+					node = new HashMap<String, byte[]>();
+					node.put("hash", hash_bytes);
+					boolean next = result.getBoolean(3);
+					if(next){
+						newTree.put(key, node);
+					}
+					else{
+						oldTree.put(key, node);
+					}
+					
+				}
+				ArrayList<byte[]> hashes = new ArrayList<byte[]>();
+				hashes.add(newTree.get("").get("hash"));
+				hashes.add(oldTree.get("").get("hash"));
+				LOG.debug("Got the hash for the changeset: "+hashes.toString());
+				try{
+					Signature rsa = Signature.getInstance("SHA256withRSA");
+					rsa.initSign(priv);
+					for(byte[] b:hashes){
+						rsa.update(b);
+					}
+					byte[] signature = rsa.sign();
+					LOG.debug(signature.toString());
+					SQLStmt signatureSet = new SQLStmt(String.format("SELECT from credereum_sign_transaction(?,?);"));
+                	PreparedStatement signedStatement = this.getPreparedStatement(conn, signatureSet);
+                	signedStatement.setString(1, pub_key.toString());
+                	signedStatement.setBytes(2, signature);
+                	signedStatement.execute();
+				}
+				catch(Exception e){
+					LOG.error("ERROR:",e);
+				}
+	
+				conn.commit();
+			}
+        }
+        catch(Exception e){
+            LOG.error("ERROR:", e);
+        }
     }
 
 }

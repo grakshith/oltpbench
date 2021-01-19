@@ -30,6 +30,7 @@ import com.oltpbenchmark.benchmarks.ycsb.procedures.ReadModifyWriteRecord;
 import com.oltpbenchmark.benchmarks.ycsb.procedures.ReadRecord;
 import com.oltpbenchmark.benchmarks.ycsb.procedures.ScanRecord;
 import com.oltpbenchmark.benchmarks.ycsb.procedures.UpdateRecord;
+import com.oltpbenchmark.benchmarks.ycsb.procedures.YCSBProcedure;
 import com.oltpbenchmark.distributions.CounterGenerator;
 import com.oltpbenchmark.distributions.ZipfianGenerator;
 import com.oltpbenchmark.types.TransactionStatus;
@@ -57,7 +58,7 @@ public class YCSBWorker extends Worker<YCSBBenchmark> {
     private final ReadModifyWriteRecord procReadModifyWriteRecord;
     private final InsertRecord procInsertRecord;
     private final DeleteRecord procDeleteRecord;
-    
+
     public YCSBWorker(YCSBBenchmark benchmarkModule, int id, int init_record_count) {
         super(benchmarkModule, id);
         readRecord = new ZipfianGenerator(init_record_count);// pool for read keys
@@ -106,6 +107,12 @@ public class YCSBWorker extends Worker<YCSBBenchmark> {
         assert (this.procUpdateRecord!= null);
         int keyname = readRecord.nextInt();
         this.buildParameters();
+        try{
+            this.procUpdateRecord.read_file();
+        }
+        catch(Exception e){
+            YCSBProcedure.LOG.error("ERROR:",e);
+        }
         this.procUpdateRecord.run(conn, keyname, this.params);
     }
 
@@ -126,6 +133,12 @@ public class YCSBWorker extends Worker<YCSBBenchmark> {
         assert (this.procReadModifyWriteRecord != null);
         int keyname = readRecord.nextInt();
         this.buildParameters();
+        try{
+            this.procReadModifyWriteRecord.read_file();
+        }
+        catch(Exception e){
+            YCSBProcedure.LOG.error("ERROR:",e);
+        }
         this.procReadModifyWriteRecord.run(conn, keyname, this.params, this.results);
     }
 
@@ -133,12 +146,24 @@ public class YCSBWorker extends Worker<YCSBBenchmark> {
         assert (this.procInsertRecord != null);
         int keyname = insertRecord.nextInt();
         this.buildParameters();
+        try{
+            this.procInsertRecord.read_file();
+        }
+        catch(Exception e){
+            YCSBProcedure.LOG.error("ERROR:",e);
+        }
         this.procInsertRecord.run(conn, keyname, this.params);
     }
 
     private void deleteRecord() throws SQLException {
         assert (this.procDeleteRecord != null);
         int keyname = readRecord.nextInt();
+        try{
+            this.procDeleteRecord.read_file();
+        }
+        catch(Exception e){
+            YCSBProcedure.LOG.error("ERROR:",e);
+        }
         this.procDeleteRecord.run(conn, keyname);
     }
 
